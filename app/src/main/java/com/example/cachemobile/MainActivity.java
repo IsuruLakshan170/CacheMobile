@@ -1,23 +1,11 @@
 package com.example.cachemobile;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
-import android.content.DialogInterface;
-import android.content.pm.PackageManager;
-import android.content.res.AssetFileDescriptor;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
-import android.widget.Toast;
-
 import org.tensorflow.lite.Interpreter;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -27,8 +15,6 @@ import java.io.OutputStream;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
-import android.Manifest;
-
 
 public class MainActivity extends AppCompatActivity {
     Interpreter tflite;
@@ -39,7 +25,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         copyToInternalStorage("V");
         runModel("c");
-
+        //test data type
+        dType("V");
     }
 
     //copy from asset to internal storage
@@ -175,6 +162,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //close model
+
+    //check data type
+    private void dType(String v){
+        try {
+            InputStream inputStream = getAssets().open("model.tflite");
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int len;
+            while ((len = inputStream.read(buffer)) != -1) {
+                byteArrayOutputStream.write(buffer, 0, len);
+            }
+            String result = byteArrayOutputStream.toString("UTF-8");
+            Log.i("MyApp", "Data type : "+result);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+    //close data type
 
     /*
     The internal storage of an Android app is considered to be relatively secure because it is private to the app and
