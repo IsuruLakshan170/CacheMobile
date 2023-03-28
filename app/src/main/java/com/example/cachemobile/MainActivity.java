@@ -1,33 +1,192 @@
 package com.example.cachemobile;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.Context;
+import android.content.ContextWrapper;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import org.tensorflow.lite.Interpreter;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.Socket;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
     Interpreter tflite;
+    private static final String SERVER_ADDRESS = "141.145.200.6";
+    private static final int SERVER_PORT = 8000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        copyToInternalStorage("V");
+        //copy model and get predictions
+//        copyToInternalStorage("V");
         runModel("c");
-        //test data type
-        dType("V");
+
+
+        //socket handling
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+//                socketConnect("V");
+
+
     }
+
+    //socket connect
+    private void socketConnect(String v){
+
+        try {
+            //create socket and connect to server
+            Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+            System.out.println("Connected to server.");
+            Log.i("Socket", "Connected to server.");
+            //data recive untill recive  new line caractor
+            BufferedReader BReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            //print data recived for reader variable
+            String MyUrl = BReader.readLine();
+            System.out.println("recived data : " + MyUrl);
+            Log.i("Socket", "recived data : " + MyUrl);
+
+            //socket close
+            socket.close();
+            try {
+                Log.i("Socket", "Try ");
+
+                // MyUrl = "http://localhost:5000/download?ID=123";
+                URL url = new URL(MyUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                Log.i("Socket", "Try ");
+
+                if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    String fileName = "5MB.zip";
+                    Log.i("Socket", "Input Stream");
+
+                    InputStream inputStream = conn.getInputStream();
+
+                    // Get the path to the internal storage directory
+                    File directory = new File(getFilesDir(), "models");
+                    directory.mkdirs();
+                    Log.i("Socket", "models dir");
+
+                    // Create a new file in the internal storage directory and copy the model data to it
+                    File modelFile = new File(directory, "model.tflite");
+                    OutputStream outputStream = new FileOutputStream(modelFile);
+
+//                    FileOutputStream outputStream = new FileOutputStream(fileName);
+                    byte[] buffer = new byte[1024];
+                    int bytesRead = -1;
+                    Log.i("Socket", "read....");
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                        Log.i("Socket", "Writing....");
+
+                    }
+
+                    outputStream.close();
+                    inputStream.close();
+                    Log.i("Socket", "Save to internal storage");
+
+                    System.out.println("File downloaded successfully.");
+                } else {
+                    Log.i("Socket", "Failed to download file. Response code: " + conn.getResponseCode());
+                    System.out.println("Failed to download file. Response code: " + conn.getResponseCode());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        } catch (UnknownHostException e) {
+            Log.i("Socket", "ERROR: Server not found.");
+            System.err.println("ERROR: Server not found.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+        }).start();
+
+    }
+
+    //close socket connect
+
+    //http network
+
+    private void downloadImage(String imageUrl) {
+        new AsyncTask<String, Void, Bitmap>() {
+            @Override
+            protected Bitmap doInBackground(String... params) {
+                String imageUrl = params[0];
+                try {
+                    URL url = new URL(imageUrl);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setDoInput(true);
+                    connection.connect();
+                    InputStream input = connection.getInputStream();
+                    Bitmap bitmap = BitmapFactory.decodeStream(input);
+                    return bitmap;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+
+            @Override
+            protected void onPostExecute(Bitmap result) {
+                super.onPostExecute(result);
+                if (result != null) {
+                    saveImageToInternalStorage(result);
+                    Log.i("DownloadImage", "Image downloaded successfully");
+                } else {
+                    Log.i("DownloadImage", "Failed to download image");
+                }
+            }
+        }.execute(imageUrl);
+    }
+
+    private void saveImageToInternalStorage(Bitmap bitmap) {
+
+        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+
+// Get the path to the "models" directory in internal storage
+        File directory = new File(cw.getFilesDir(), "models");
+        directory.mkdirs();
+
+// Create a new file in the "models" directory and save the image to it
+        File mypath = new File(directory, "image.jpg");
+        FileOutputStream fos = null;
+        try {
+            fos = new FileOutputStream(mypath);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+            fos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    //http test network
+
+
 
     //copy from asset to internal storage
     private void copyToInternalStorage(String v){
@@ -128,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
 //    }
 
     private void predict(String v){
-        float[] x_data = {10, 1};
+        float[] x_data = {1, 1};
 
 
         float[][] x_np = new float[1][2];
