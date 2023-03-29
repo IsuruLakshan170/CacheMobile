@@ -39,20 +39,24 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //copy model and get predictions
-//        copyToInternalStorage("V");
-//        runModel("c");
+        //--copy model and get predictions---
+        //copyToInternalStorage("V");
+         runModel("c");
 
+        //---read csv and get model accuray---
+        // readCsv("V");
 
+        //---rename model---
+        // renameModel("v");
 
-        //read csv and get model accuray
-        readCsv("V");
+        //---delete files---
+//        deleteFiles("v");
 
-        //socket handling
+        //---socket handling---
         new Thread(new Runnable() {
             @Override
             public void run() {
-//                socketConnect("V");
+            //socketConnect("V");
 
 
     }
@@ -133,6 +137,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //close socket connect
+
+    //model rename and delete files
+     private void renameModel(String v){
+         File modelFile = new File(getFilesDir() + "/models/receivedmodel.tflite");
+         File newModelFile = new File(getFilesDir() + "/models/model.tflite");
+         if(modelFile.exists()) {
+             if(modelFile.renameTo(newModelFile)) {
+                 Log.d("FileRename", "File renamed successfully.");
+             } else {
+                 Log.d("FileRename", "File rename failed.");
+             }
+         } else {
+             Log.d("FileRename", "File not found.");
+         }
+     }
+
+    private void deleteFiles(String v) {
+        File receivedModelFile = new File(getFilesDir() + "/models/model.tflite");
+        if (receivedModelFile.exists()) {
+            if (receivedModelFile.delete()) {
+                Log.d("FileDelete", "File deleted successfully.");
+            } else {
+                Log.d("FileDelete", "File delete failed.");
+            }
+        } else {
+            Log.d("FileDelete", "File not found.");
+        }
+
+    }
+
+
+    //close model rename  and delete files
+
 
     //http network
 
