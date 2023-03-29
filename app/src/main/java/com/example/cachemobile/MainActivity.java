@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
@@ -26,6 +27,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
@@ -39,8 +41,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         //copy model and get predictions
 //        copyToInternalStorage("V");
-        runModel("c");
+//        runModel("c");
 
+
+
+        //read csv and get model accuray
+        readCsv("V");
 
         //socket handling
         new Thread(new Runnable() {
@@ -186,8 +192,6 @@ public class MainActivity extends AppCompatActivity {
 
     //http test network
 
-
-
     //copy from asset to internal storage
     private void copyToInternalStorage(String v){
         Log.i("MyApp", "copyToInternalStorage function start");
@@ -321,6 +325,125 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //close model
+
+    //read csv file for asset
+    private void readCsv(String v){
+        // Load the CSV file from the assets folder
+        String fileName = "dataset.csv";
+        String[] data = loadDataFromAsset(this, fileName);
+        Log.i("MyApp", "data set Loaded");
+        // Preview the data in the console
+
+
+// Split the first row into column names (if needed)
+        String[] columnNames = data[0].split(",");
+
+// Initialize the intData array
+        int[][] intData = new int[data.length-1][columnNames.length];
+
+// Convert the data into integers and store in the intData array
+        for (int i = 1; i < data.length; i++) {
+            String[] rowData = data[i].split(",");
+            for (int j = 0; j < columnNames.length; j++) {
+                intData[i-1][j] = Integer.parseInt(rowData[j]);
+            }
+        }
+        loadModel("v");
+        modelAccuracy(intData);
+
+
+    }
+
+    private String[] loadDataFromAsset(Context context, String fileName) {
+        AssetManager assetManager = context.getAssets();
+        StringBuilder stringBuilder = new StringBuilder();
+
+        try {
+            // Open the CSV file as an InputStream and read its contents
+            InputStream inputStream = assetManager.open(fileName);
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                stringBuilder.append(line).append("\n");
+            }
+
+            bufferedReader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Convert the CSV data to an array of Strings
+        return stringBuilder.toString().split("\n");
+    }
+
+
+
+//close read csv
+
+    //model accuracy
+    private void loadModel(String v){
+        try {
+            tflite = new Interpreter(loadFile());
+            Log.i("MyApp", "Model load success fully");
+
+        }catch (Exception ex){
+            ex.printStackTrace();
+            Log.i("MyApp", "Error");
+            Log.i("MyApp", ex.toString());
+
+        }
+    }
+    private void modelAccuracy(int[][] data){
+
+
+        float[][] input_values = new float[data.length][2];
+        int[][] realOutput = new int[data.length][1];
+
+        for (int i = 0; i < data.length; i++) {
+            input_values[i][0] = (float) data[i][0];
+            input_values[i][1] = (float) data[i][1];
+            realOutput[i][0] = data[i][2];
+        }
+
+
+// define input and output arrays
+        float[][] x_np = new float[input_values.length][2];
+        float[][] output = new float[1][7];
+
+        int correctPredictions = 0;
+
+// loop over input values
+        for (int i = 0; i < input_values.length; i++) {
+            // set input values
+            x_np[i] = input_values[i];
+            x_np[i][0] /= 12;
+            x_np[i][1] /= 12;
+
+            // run prediction
+            tflite.run(x_np[i], output);
+
+            // get predicted label for this input value
+            int y_pred = argmax(output, 1)[0];
+            int value = realOutput[i][0];
+
+            if (y_pred == value) {
+                correctPredictions++;
+            }
+
+            // print the predicted label
+//            Log.i("MyApp", "Prediction for input " + i + ": " + y_pred);
+//            Log.i("MyApp", "Real value for input " + i + ": " + value);
+        }
+
+        float accuracy = ((float) correctPredictions / input_values.length) * 100;
+        Log.i("MyApp", "Model Accuracy: " + accuracy + "%");
+
+
+    }
+
+
+    //close model accuracy
 
     //check data type
     private void dType(String v){
