@@ -10,6 +10,11 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+
+import com.denzcoskun.imageslider.ImageSlider;
+import com.denzcoskun.imageslider.constants.ScaleTypes;
+import com.denzcoskun.imageslider.models.SlideModel;
+
 import org.tensorflow.lite.Interpreter;
 
 import java.io.BufferedReader;
@@ -29,6 +34,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     Interpreter localTfliteModel;
@@ -43,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         //--copy model and get predictions---
         //copyToInternalStorage("V");
 //         runModel("c");
@@ -52,22 +59,52 @@ public class MainActivity extends AppCompatActivity {
         //load csv file
         readCsv("V");
         //get predictions
-        predict(1,0);
+        predict(1, 0);
+
+        //imge slider
+        imageSlider("v");
+
 
         //-------------------background process---------------
+
         //---socket handling---
         new Thread(new Runnable() {
             @Override
             public void run() {
-//            backroundProcess("V");
-
+            backroundProcess("V");
+            }
+        }).start();
     }
 
 
 
+
+    //image slider
+    private void imageSlider(String v)
+    {
+        ImageSlider imageSlider = findViewById(R.id.slider);
+
+        List<SlideModel> slideModels = new ArrayList<>();
+
+        slideModels.add(new SlideModel("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ6tqp6VEz0p0GALLB37EFxuxaYNXgJT-eSsjLpaILl1e5IoQzjJlIKr-5vylrEbH2N5Xk&usqp=CAU", ScaleTypes.FIT));
+        slideModels.add(new SlideModel("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQmMyPi2erglKGZ9i5eCHOOfE-qPwnrWvtDtQ&usqp=CAU", ScaleTypes.FIT));
+        slideModels.add(new SlideModel("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRB-mJAKFYz-PoUisex2xHP6vIhRwe63K5fuQ&usqp=CAU", ScaleTypes.FIT));
+        slideModels.add(new SlideModel("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4Jt23QBgd9UaEaSoj-7nlKpDoa4qKW_0PGA&usqp=CAU", ScaleTypes.FIT));
+        slideModels.add(new SlideModel("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRpDek-8i069qz53FcPMd5Bu9alfDyIDJuzYg&usqp=CAU", ScaleTypes.FIT));
+        slideModels.add(new SlideModel("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS0XU44yqqFXmIAK5WcjctcEwBJ-04gCFoqnw&usqp=CAU", ScaleTypes.FIT));
+        slideModels.add(new SlideModel("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQiKQ069lqpt28Miyn7al5OvDdulDPB9Wj7Pw&usqp=CAU", ScaleTypes.FIT));
+
+        imageSlider.setImageList(slideModels,ScaleTypes.FIT);
+
+    }
+            //close image slider
+
+
     //background process
+
    private void backroundProcess(String v)
-   {//two modes of model accuray 1.localModel 2.receivedModel
+   {
+       //two modes of model accuray 1.localModel 2.receivedModel
 
        //load local model
        loadModel("localModel");
@@ -115,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
         //rename recieved model as local model
        renameModel(fileName,"localModel");
        Log.i("MyApp", "Successfully updated model saved to internal storage");
+
    }
 
   //close background process
@@ -138,18 +176,17 @@ public class MainActivity extends AppCompatActivity {
             //save incomming model
             Log.i("Socket", "Socket closed : " + MyUrl);
             return MyUrl;
-        } catch (UnknownHostException e) {
+        }
+        catch (UnknownHostException e) {
             Log.i("Socket", "ERROR: Server not found.");
             System.err.println("ERROR: Server not found.");
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
-
         }
         return "ERROR";
     }
-        }).start();
 
-    }
     private void saveReceivedModel(String MyUrl,String fileName){
         try {
             Log.i("MyApp", "Try ");
@@ -195,7 +232,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.i("MyApp", "Failed to download file. Response code: "+fileName +" : " + conn.getResponseCode());
                 System.out.println("Failed to download file. Response code: " + conn.getResponseCode());
             }
-        } catch (Exception e) {
+        } catch (Exception e)
+        {
             e.printStackTrace();
         }
     }
@@ -203,7 +241,7 @@ public class MainActivity extends AppCompatActivity {
     //close socket connect
 
     //model rename and delete files
-     private void renameModel(String originalName,String rename){
+    private void renameModel(String originalName,String rename){
 
          File modelFile = new File(getFilesDir() + "/models/"+originalName+".tflite");
          File newModelFile = new File(getFilesDir() + "/models/"+rename+".tflite");
@@ -283,6 +321,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
+
+
     private MappedByteBuffer loadFile(String fileName) throws IOException {
         // Get the path to the model file in the internal storage directory
         File directory = new File(getFilesDir(), "models");
@@ -326,12 +366,10 @@ public class MainActivity extends AppCompatActivity {
     private void predict(int month,int gender){
         float[] x_data = {month, gender};
 
-
         float[][] x_np = new float[1][2];
         x_np[0] = x_data;
         x_np[0][0] /= 12;
         x_np[0][1] /= 12;
-
 
         float[][] output = new float[1][7];
         localTfliteModel.run(x_np, output);
@@ -340,8 +378,6 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < y_pred_model_1.length; i++) {
             Log.i("MyApp","Prediction results: " +String.valueOf(y_pred_model_1[i]));
         }
-
-
     }
 
     public static int[] argmax(float[][] array, int axis) {
@@ -434,15 +470,13 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
-
-
         }catch (Exception ex){
             ex.printStackTrace();
             Log.i("MyApp", "Error");
             Log.i("MyApp", ex.toString());
-
         }
     }
+
     private float modelAccuracy(String accuracyMode){
         int[][] data= dataArray;
 
@@ -454,7 +488,6 @@ public class MainActivity extends AppCompatActivity {
             input_values[i][1] = (float) data[i][1];
             realOutput[i][0] = data[i][2];
         }
-
 
 // define input and output arrays
         float[][] x_np = new float[input_values.length][2];
@@ -477,7 +510,6 @@ public class MainActivity extends AppCompatActivity {
            else if(accuracyMode=="receivedModel"){
                 receivedTfliteModel.run(x_np[i], output);
             }
-
             // get predicted label for this input value
             int y_pred = argmax(output, 1)[0];
             int value = realOutput[i][0];
@@ -485,7 +517,6 @@ public class MainActivity extends AppCompatActivity {
             if (y_pred == value) {
                 correctPredictions++;
             }
-
             // print the predicted label
 //            Log.i("MyApp", "Prediction for input " + i + ": " + y_pred);
 //            Log.i("MyApp", "Real value for input " + i + ": " + value);
@@ -495,9 +526,7 @@ public class MainActivity extends AppCompatActivity {
         Log.i("MyApp", accuracyMode+" Accuracy: " + accuracy + "%");
         return accuracy;
 
-
     }
-
 
     //close model accuracy
 
